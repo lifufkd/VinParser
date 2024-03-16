@@ -2,23 +2,26 @@
 #            Created by             #
 #                SBR                #
 #####################################
-import time
 from tqdm import tqdm
 import simpleaudio as sa
 import pandas as pd
-import threading
 import sys
-import keyboard
 import logging
+import time
 from datetime import datetime
 from config_parser import ConfigParser
-from backseat import CarDetermineByVin, ChatGpt
+from backend import Parser
 ####################################################################
 config_name = 'config.json'
 ####################################################################
 
 
-def read_xlsx(name, column):
+def read_vin(name, column):
+    df = pd.read_excel(name)
+    return df[column].tolist()
+
+
+def read_odometr(name, column):
     df = pd.read_excel(name)
     return df[column].tolist()
 
@@ -37,36 +40,16 @@ def write_xlsx(data):
     df.to_excel(new_file, index=False)
 
 
-def key_writer():
-    global key_realise
-    key_realise = True
-
-
-def keyboardr():
-    keyboard.add_hotkey('enter', lambda: key_writer())
-
-
-def get_prices(vin_numbers, sound):
-    global key_realise
-    flag = False
+def get_prices():
     output = {args.get_config()['Private_Price_Column']: [], args.get_config()['Traid_In_Column']: []}
-    for vin in tqdm(vin_numbers):
-        data, counter = car_detect.check_vin(vin, flag)
-        if counter >= 60:
-            logging.info(f'Остановка на 300s для избежания блокировки!!! (Вы можете продолжить включив VPN и нажав ENTER) {datetime.now()}')
-            flag = True
-            threading.Thread(target=keyboardr).start()
-            for i in range(300):
-                if key_realise:
-                    key_realise = False
-                    break
-                time.sleep(1)
-        elif flag:
-            flag = False
-        output[args.get_config()['Traid_In_Column']].append(data[0])
-        output[args.get_config()['Private_Price_Column']].append(data[1])
+    vin_numbers = read_vin(args.get_config()['excell_name'], args.get_config()['VIN_Column'])
+    odometr = read_odometr(args.get_config()['excell_name'], args.get_config()['Odometer_Column'])
+    for vin, odomet in tqdm(zip(vin_numbers, odometr)):
+        private, trade_in = parser.get_data(vin, odomet)
+        output[args.get_config()['Traid_In_Column']].append(trade_in)
+        output[args.get_config()['Private_Price_Column']].append(private)
         write_xlsx(output)
-    play_alarm(sound)
+    play_alarm(args.get_config()['sound_file_name'])
 
 
 def play_alarm(sound):
@@ -77,10 +60,8 @@ def play_alarm(sound):
 
 
 if '__main__' == __name__:
-    key_realise = False
     logging.basicConfig(handlers=[logging.FileHandler("log.txt"), logging.StreamHandler(sys.stdout)],
                         level=logging.INFO)
     args = ConfigParser(config_name)
-    chat_gpt = ChatGpt()
-    car_detect = CarDetermineByVin(chat_gpt)
-    get_prices(read_xlsx(args.get_config()['excell_name'], args.get_config()['VIN_Column']), args.get_config()['sound_file_name'])
+    parser = Parser(args)
+    get_prices()
