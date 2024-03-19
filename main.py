@@ -7,7 +7,6 @@ import simpleaudio as sa
 import pandas as pd
 import sys
 import logging
-import time
 from datetime import datetime
 from config_parser import ConfigParser
 from backend import Parser
@@ -17,11 +16,6 @@ config_name = 'config.json'
 
 
 def read_vin(name, column):
-    df = pd.read_excel(name)
-    return df[column].tolist()
-
-
-def read_odometr(name, column):
     df = pd.read_excel(name)
     return df[column].tolist()
 
@@ -41,12 +35,12 @@ def write_xlsx(data):
 
 
 def get_prices():
-    output = {args.get_config()['Private_Price_Column']: [], args.get_config()['Traid_In_Column']: []}
+    output = {args.get_config()['Private_Price_Column']: []}
     vin_numbers = read_vin(args.get_config()['excell_name'], args.get_config()['VIN_Column'])
-    odometr = read_odometr(args.get_config()['excell_name'], args.get_config()['Odometer_Column'])
-    for vin, odomet in tqdm(zip(vin_numbers, odometr)):
-        private, trade_in = parser.get_data(vin, odomet)
-        output[args.get_config()['Traid_In_Column']].append(trade_in)
+    parser.parser_init()
+    for vin in tqdm(vin_numbers):
+        parser.authorization(vin)
+        private = parser.second_task()
         output[args.get_config()['Private_Price_Column']].append(private)
         write_xlsx(output)
     play_alarm(args.get_config()['sound_file_name'])

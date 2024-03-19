@@ -12,7 +12,7 @@ class ConfigParser:
     def __init__(self, file_path):
         super(ConfigParser, self).__init__()
         self.__file_path = file_path
-        self.__default = {'url': '', 'VIN_Column': '', 'Traid_In_Column': '', 'Private_Price_Column': '', 'Odometer_Column': '', 'sound_file_name': '', 'excell_name': '', 'zip_code': '', 'dolphin_api': ''}
+        self.__default = {'url': '', 'VIN_Column': '', 'Traid_In_Column': '', 'Private_Price_Column': '', 'sound_file_name': '', 'excell_name': ''}
         self.__current_config = None
         self.load_conf()
 
